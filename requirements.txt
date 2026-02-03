@@ -1,0 +1,7 @@
+fastapi
+uvicorn
+requests
+beautifulsoup4
+jinja2
+sqlalchemy
+aiohttp

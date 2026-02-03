@@ -1,0 +1,88 @@
+{
+    "CVPR": {
+        "scraper": "CVPR",
+        "years": {
+            "2022": "https://openaccess.thecvf.com/CVPR2022?day=all",
+            "2023": "https://openaccess.thecvf.com/CVPR2023?day=all",
+            "2024": "https://openaccess.thecvf.com/CVPR2024?day=all",
+            "2025": "https://cvpr.thecvf.com/Conferences/2025/AcceptedPapers"
+        }
+    },
+    "ICCV": {
+        "scraper": "ICCV",
+        "years": {
+            "2023": "https://dblp.org/db/conf/iccv/iccv2023.html",
+            "2025": "https://iccv.thecvf.com/Conferences/2025/AcceptedPapers"
+        }
+    },
+    "ECCV": {
+        "scraper": "ECCV",
+        "years": {
+            "2022": "https://www.ecva.net/papers.php",
+            "2024": "https://www.ecva.net/papers.php"
+        }
+    },
+    "NeurIPS": {
+        "scraper": "NeurIPS",
+        "years": {
+            "2022": "https://papers.nips.cc/paper_files/paper/2022",
+            "2023": "https://papers.nips.cc/paper_files/paper/2023",
+            "2024": "https://papers.nips.cc/paper_files/paper/2024",
+            "2025": "https://neurips.cc/Conferences/2025/Schedule"
+        }
+    },
+    "ICML": {
+        "scraper": "ICML",
+        "years": {
+            "2022": "https://icml.cc/virtual/2022/papers.html",
+            "2023": "https://icml.cc/virtual/2023/papers.html",
+            "2024": "https://icml.cc/virtual/2024/papers.html",
+            "2025": "https://icml.cc/virtual/2025/papers.html"
+        }
+    },
+    "ICLR": {
+        "scraper": "ICLR",
+        "years": {
+            "2022": "https://iclr.cc/virtual/2022/papers.html",
+            "2023": "https://iclr.cc/virtual/2023/papers.html",
+            "2024": "https://iclr.cc/virtual/2024/papers.html",
+            "2025": "https://iclr.cc/virtual/2025/papers.html"
+        }
+    },
+    "NDSS": {
+        "scraper": "NDSS",
+        "years": {
+            "2022": "https://www.ndss-symposium.org/ndss2022/accepted-papers/",
+            "2023": "https://www.ndss-symposium.org/ndss2023/accepted-papers/",
+            "2024": "https://www.ndss-symposium.org/ndss2024/accepted-papers/",
+            "2025": "https://www.ndss-symposium.org/ndss2025/accepted-papers/"
+        }
+    },
+    "USENIX Security": {
+        "scraper": "USENIX",
+        "years": {
+            "2022": "https://www.usenix.org/conference/usenixsecurity22/technical-sessions",
+            "2023": "https://www.usenix.org/conference/usenixsecurity23/technical-sessions",
+            "2024": "https://www.usenix.org/conference/usenixsecurity24/technical-sessions",
+            "2025": "https://www.usenix.org/conference/usenixsecurity25/cycle1-accepted-papers"
+        }
+    },
+    "IEEE S&P": {
+        "scraper": "IEEESP",
+        "years": {
+            "2022": "https://sp2022.ieee-security.org/accepted-papers.html",
+            "2023": "https://sp2023.ieee-security.org/accepted-papers.html",
+            "2024": "https://sp2024.ieee-security.org/accepted-papers.html",
+            "2025": "https://sp2025.ieee-security.org/accepted-papers.html"
+        }
+    },
+    "ACM CCS": {
+        "scraper": "ACMCCS",
+        "years": {
+            "2022": "https://dblp.org/db/conf/ccs/ccs2022.html",
+            "2023": "https://dblp.org/db/conf/ccs/ccs2023.html",
+            "2024": "https://dblp.org/db/conf/ccs/ccs2024.html",
+            "2025": "https://dblp.org/db/conf/ccs/ccs2025.html"
+        }
+    }
+}

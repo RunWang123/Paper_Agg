@@ -1,0 +1,37 @@
+# Database
+database/*.db
+*.db
+
+# Environment and Cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.coverage
+htmlcov/
+.ipynb_checkpoints/
+.venv/
+env/
+venv/
+ENV/
+
+# Logs
+*.log
+scraper.log
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Project specific
+ccs_2024.html
+analyze_ccs.py
+verify_iccv_2025.py
+test_selective.py
+verify_scrapers.py
