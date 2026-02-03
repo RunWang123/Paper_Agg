@@ -31,8 +31,18 @@ class Paper(Base):
     __table_args__ = (UniqueConstraint('title', 'conference', 'year', name='_title_conf_year_uc'),)
 
 # Setup DB
-DATABASE_URL = "sqlite:///./database/papers.db"
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+import os
+
+# Use PostgreSQL in production (Render), SQLite locally
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./database/papers.db")
+
+# Render provides Postgres URLs starting with 'postgres://' but SQLAlchemy needs 'postgresql://'
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+# SQLite needs check_same_thread, PostgreSQL doesn't
+connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
+engine = create_engine(DATABASE_URL, connect_args=connect_args)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 def init_db():

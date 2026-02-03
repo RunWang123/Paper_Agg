@@ -5,3 +5,4 @@ beautifulsoup4
 jinja2
 sqlalchemy
 aiohttp
+psycopg2-binary
