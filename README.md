@@ -39,6 +39,8 @@ chmod +x run.sh
 ./run.sh
 ```
 
+**Note**: On the first run, the system will initialize the database and perform an initial scan of all configured conferences. Depending on your network speed and the number of conferences, this may take several minutes. You can monitor the progress in the terminal.
+
 Alternatively, run the server manually:
 ```bash
 python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
