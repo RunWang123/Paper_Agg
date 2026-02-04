@@ -101,6 +101,10 @@ class Scanner:
                     session.commit()
                     logger.info(f"Added {new_count} new papers for {conf_id}.")
                     
+                    # Add a small delay between scraping different years to be respectful
+                    import time
+                    time.sleep(1)
+                    
                 except Exception as e:
                     logger.error(f"Failed to scrape {conf_id}: {e}")
                     session.rollback()

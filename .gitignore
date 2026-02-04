@@ -1,5 +1,5 @@
 # Database files (but keep Python modules!)
-*.db
+.db
 *.db-journal
 *.db-shm
 *.db-wal
