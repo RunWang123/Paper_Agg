@@ -70,11 +70,18 @@ class Scanner:
         
         # Iterate over the loaded config
         # Structure is { "ConfName": { "scraper": "Type", "years": { "2024": "url" } } }
+        logger.info(f"Starting scan with {len(self.config)} conferences configured")
+        logger.info(f"Conferences to process: {list(self.config.keys())}")
+        if target_confs:
+            logger.info(f"Filtering to only: {target_confs}")
+        
         for conf_name, conf_data in self.config.items():
             # Filter if target_confs is specified
             if target_confs and conf_name not in target_confs:
+                logger.debug(f"Skipping {conf_name} (not in target list)")
                 continue
-                
+            
+            logger.info(f"Processing conference: {conf_name}")
             scraper_type = conf_data.get("scraper")
             years_data = conf_data.get("years", {})
             
