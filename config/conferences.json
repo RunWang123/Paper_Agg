@@ -52,28 +52,28 @@
     "NDSS": {
         "scraper": "NDSS",
         "years": {
-            "2022": "https://www.ndss-symposium.org/ndss2022/accepted-papers/",
-            "2023": "https://www.ndss-symposium.org/ndss2023/accepted-papers/",
-            "2024": "https://www.ndss-symposium.org/ndss2024/accepted-papers/",
-            "2025": "https://www.ndss-symposium.org/ndss2025/accepted-papers/"
+            "2022": "https://dblp.org/db/conf/ndss/ndss2022.html",
+            "2023": "https://dblp.org/db/conf/ndss/ndss2023.html",
+            "2024": "https://dblp.org/db/conf/ndss/ndss2024.html",
+            "2025": "https://dblp.org/db/conf/ndss/ndss2025.html"
         }
     },
     "USENIX Security": {
         "scraper": "USENIX",
         "years": {
-            "2022": "https://www.usenix.org/conference/usenixsecurity22/technical-sessions",
-            "2023": "https://www.usenix.org/conference/usenixsecurity23/technical-sessions",
-            "2024": "https://www.usenix.org/conference/usenixsecurity24/technical-sessions",
-            "2025": "https://www.usenix.org/conference/usenixsecurity25/cycle1-accepted-papers"
+            "2022": "https://dblp.org/db/conf/uss/uss2022.html",
+            "2023": "https://dblp.org/db/conf/uss/uss2023.html",
+            "2024": "https://dblp.org/db/conf/uss/uss2024.html",
+            "2025": "https://dblp.org/db/conf/uss/uss2025.html"
         }
     },
     "IEEE S&P": {
         "scraper": "IEEESP",
         "years": {
-            "2022": "https://sp2022.ieee-security.org/accepted-papers.html",
-            "2023": "https://sp2023.ieee-security.org/accepted-papers.html",
-            "2024": "https://sp2024.ieee-security.org/accepted-papers.html",
-            "2025": "https://sp2025.ieee-security.org/accepted-papers.html"
+            "2022": "https://dblp.org/db/conf/sp/sp2022.html",
+            "2023": "https://dblp.org/db/conf/sp/sp2023.html",
+            "2024": "https://dblp.org/db/conf/sp/sp2024.html",
+            "2025": "https://dblp.org/db/conf/sp/sp2025.html"
         }
     },
     "ACM CCS": {

@@ -1,50 +1,62 @@
 from .base import EventScraper, PaperData
-import re
+from bs4 import BeautifulSoup
+from urllib.parse import urljoin
 
 class NDSSScraper(EventScraper):
     def scrape(self, url: str) -> list[PaperData]:
-        soup = self.get_soup(url)
         papers = []
+        soup = self.get_soup(url)
         if not soup:
             return papers
 
-        # Logic based on 2025 NDSS Accepted Papers page structure:
-        # <div class="tag-box rel-paper">
-        #   <div class="selected-post-text-area rel-paper-in">
-        #      <h3 class="blog-post-title">Title...</h3>
-        #      <p>Authors...</p>
-        #      <a class="paper-link-abs" href="...">More Details</a>
-        #   </div>
-        # </div>
-
-        paper_blocks = soup.find_all('div', class_='rel-paper')
+        # NDSS via DBLP (dblp.org/db/conf/ndss/ndssYYYY.html)
+        # DBLP Layout (same as ACM CCS, USENIX, and IEEE S&P):
+        # <li class="entry inproceedings" ...>
+        #   <cite class="data" ...>
+        #     <span class="title" itemprop="name">Paper Title.</span>
+        #     <span itemprop="author" ...><a ...><span itemprop="name">Author Name</span></a></span>
+        #     ...
+        #   </cite>
+        # </li>
         
-        for block in paper_blocks:
+        items = soup.find_all('li', class_='entry inproceedings')
+        
+        for li in items:
+            cite = li.find('cite', class_='data')
+            if not cite: continue
+            
             # Title
-            h3 = block.find('h3', class_='blog-post-title')
-            if not h3:
-                continue
+            title_span = cite.find('span', class_='title', itemprop='name')
+            if not title_span: continue
+            title = title_span.get_text(strip=True)
             
-            title = h3.get_text(strip=True)
+            # Authors
+            author_spans = cite.find_all('span', itemprop='author')
+            authors_list = []
+            for author_span in author_spans:
+                name_span = author_span.find('span', itemprop='name')
+                if name_span:
+                    authors_list.append(name_span.get_text(strip=True))
             
-            # Authors are in the <p> tag sibling/child
-            # The structure shows h3 and p as siblings inside selected-post-text-area
-            p_author = block.find('p')
-            authors = "Unknown"
-            if p_author:
-                authors = p_author.get_text(strip=True)
-
-            # Link
-            a_link = block.find('a', class_='paper-link-abs')
+            authors = ", ".join(authors_list)
+            
+            # Link - usually to NDSS proceedings or DOI
+            # The link is usually in <nav class="publ"> with <ul> <li> <a href="...">
+            nav = li.find('nav', class_='publ')
             link = url
-            if a_link:
-                link = a_link.get('href')
-
+            if nav:
+                # Find link with 'electronic edition' or just first link
+                ul = nav.find('ul')
+                if ul:
+                    first_a = ul.find('a')
+                    if first_a:
+                         link = first_a.get('href')
+            
             papers.append(PaperData(
                 title=title,
                 authors=authors,
                 url=link,
-                pdf_url=None # PDF usually on the details page, skip for now or can fetch if needed
+                pdf_url=None
             ))
             
         return papers

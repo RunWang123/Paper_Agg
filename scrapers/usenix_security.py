@@ -9,37 +9,54 @@ class USENIXScraper(EventScraper):
         if not soup:
             return papers
 
-        # USENIX Security has two different page structures:
-        # 1. "technical-sessions" pages (2022-2024): Papers are in divs with links
-        # 2. "accepted-papers" pages (2025+): Papers are in a simple list
+        # USENIX Security via DBLP (dblp.org/db/conf/uss/ussYYYY.html)
+        # DBLP Layout (same as ACM CCS):
+        # <li class="entry inproceedings" ...>
+        #   <cite class="data" ...>
+        #     <span class="title" itemprop="name">Paper Title.</span>
+        #     <span itemprop="author" ...><a ...><span itemprop="name">Author Name</span></a></span>
+        #     ...
+        #   </cite>
+        # </li>
         
-        # Find all links that could be papers
-        # Papers typically link to paths like /conference/usenixsecurity{year}/presentation/{paper-slug}
-        paper_links = []
+        items = soup.find_all('li', class_='entry inproceedings')
         
-        for link in soup.find_all('a', href=True):
-            href = link.get('href', '')
-            # Match presentation links
-            if '/presentation/' in href:
-                paper_links.append(link)
-        
-        # Process each paper link
-        for link in paper_links:
-            title = link.get_text(strip=True)
-            if not title:
-                continue
-                
-            paper_url = urljoin(url, link['href'])
+        for li in items:
+            cite = li.find('cite', class_='data')
+            if not cite: continue
             
-            # Try to find authors - they might be in nearby text or we skip for now
-            # USENIX pages often don't show authors on the listing page
-            authors = "USENIX Security Authors"
+            # Title
+            title_span = cite.find('span', class_='title', itemprop='name')
+            if not title_span: continue
+            title = title_span.get_text(strip=True)
+            
+            # Authors
+            author_spans = cite.find_all('span', itemprop='author')
+            authors_list = []
+            for author_span in author_spans:
+                name_span = author_span.find('span', itemprop='name')
+                if name_span:
+                    authors_list.append(name_span.get_text(strip=True))
+            
+            authors = ", ".join(authors_list)
+            
+            # Link - usually to USENIX open access or DOI
+            # The link is usually in <nav class="publ"> with <ul> <li> <a href="...">
+            nav = li.find('nav', class_='publ')
+            link = url
+            if nav:
+                # Find link with 'electronic edition' or just first link
+                ul = nav.find('ul')
+                if ul:
+                    first_a = ul.find('a')
+                    if first_a:
+                         link = first_a.get('href')
             
             papers.append(PaperData(
                 title=title,
                 authors=authors,
-                url=paper_url,
-                pdf_url=None  # PDFs are usually on the paper's individual page
+                url=link,
+                pdf_url=None
             ))
-        
+            
         return papers

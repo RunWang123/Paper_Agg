@@ -9,92 +9,54 @@ class IEEESPScraper(EventScraper):
         if not soup:
             return papers
 
-        # IEEE S&P (ieee-security.org)
-        # Program papers page usually has a list.
-        # Structure varies by year but often:
-        # <ul> <li> <b>Title</b> <br> Authors </li> ... </ul>
-        # OR 
-        # <div class="paper"> ... </div>
+        # IEEE S&P via DBLP (dblp.org/db/conf/sp/spYYYY.html)
+        # DBLP Layout (same as ACM CCS and USENIX):
+        # <li class="entry inproceedings" ...>
+        #   <cite class="data" ...>
+        #     <span class="title" itemprop="name">Paper Title.</span>
+        #     <span itemprop="author" ...><a ...><span itemprop="name">Author Name</span></a></span>
+        #     ...
+        #   </cite>
+        # </li>
         
-        # 2024/2025 might use a table or div structure.
+        items = soup.find_all('li', class_='entry inproceedings')
         
-        # Try finding bold elements which might be titles?
-        # Or search for specific classes.
-        
-        # Strategy: Look for "modal" or "paper-title" classes if modern site.
-        # Older sites (simple HTML): List items.
-        
-        # Let's try a heuristic: text blocks with significant length separated by known elements.
-        
-        # Inspecting 2024 site structure (hypothetically):
-        # <div class="panel-body"> <p> <b>Title</b> <br> <i>Authors</i> ... </p> </div>
-        
-        # Strategy: Look for div.list-group-item which contains bold title and collapsible authors
-        # This matches sp2024/2025 structure
-        
-        items = soup.find_all('div', class_='list-group-item')
-        if items:
-            for item in items:
-                # Title is in <b><a>...</a></b>
-                b_tag = item.find('b')
-                if not b_tag: continue
-                
-                a_tag = b_tag.find('a')
-                if not a_tag:
-                    # Sometimes just <b>Title</b>
-                    title = b_tag.get_text(strip=True)
-                    link = url
-                else:
-                    title = a_tag.get_text(strip=True)
-                    link = a_tag.get('href')
-                    if link and not link.startswith('http') and not link.startswith('#'):
-                        link = urljoin(url, link)
-                    else:
-                        link = url # Collapsible link is just anchor
-
-                # Authors in div class="collapse authorlist"
-                author_div = item.find('div', class_='authorlist')
-                if author_div:
-                     # Authors often have superscripts for affiliation, remove them?
-                     # text is usually "Name1, Name2..."
-                     # get_text might include 1, 2 etc.
-                     authors = author_div.get_text(" ", strip=True) 
-                else:
-                     # Fallback to text parsing if no authorlist div
-                     # Item text: Title Authors
-                     text = item.get_text(" ", strip=True)
-                     authors = text.replace(title, "").strip()
-
-                if len(title) > 5:
-                    papers.append(PaperData(
-                        title=title,
-                        authors=authors,
-                        url=link,
-                        pdf_url=None
-                    ))
-            return papers
-
-        # Fallback for older years (simple lists)
-        # ... existing fallback logic or new logic for 2022/2023 if they differ ...
-        # Based on curl, 2022/2023 might use similar or simple <ul>
-        # Let's check if there are <li> elements with bold titles
-        
-        lis = soup.find_all('li')
-        for li in lis:
-             # Basic check for title in bold
-             b_tag = li.find(['b', 'strong'])
-             if b_tag:
-                 title = b_tag.get_text(strip=True)
-                 if len(title) < 10: continue
-                 
-                 text = li.get_text(" ", strip=True)
-                 authors = text.replace(title, "").strip().lstrip(".,- ")
-                 
-                 papers.append(PaperData(
-                    title=title, 
-                    authors=authors,
-                    url=url,
-                    pdf_url=None
-                 ))
-                 
+        for li in items:
+            cite = li.find('cite', class_='data')
+            if not cite: continue
+            
+            # Title
+            title_span = cite.find('span', class_='title', itemprop='name')
+            if not title_span: continue
+            title = title_span.get_text(strip=True)
+            
+            # Authors
+            author_spans = cite.find_all('span', itemprop='author')
+            authors_list = []
+            for author_span in author_spans:
+                name_span = author_span.find('span', itemprop='name')
+                if name_span:
+                    authors_list.append(name_span.get_text(strip=True))
+            
+            authors = ", ".join(authors_list)
+            
+            # Link - usually to DOI or IEEE
+            # The link is usually in <nav class="publ"> with <ul> <li> <a href="...">
+            nav = li.find('nav', class_='publ')
+            link = url
+            if nav:
+                # Find link with 'electronic edition' or just first link
+                ul = nav.find('ul')
+                if ul:
+                    first_a = ul.find('a')
+                    if first_a:
+                         link = first_a.get('href')
+            
+            papers.append(PaperData(
+                title=title,
+                authors=authors,
+                url=link,
+                pdf_url=None
+            ))
+            
         return papers
