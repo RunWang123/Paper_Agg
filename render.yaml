@@ -10,15 +10,20 @@ services:
       - key: PYTHON_VERSION
         value: 3.9.0
       - key: DATABASE_URL
-        fromDatabase:
-          name: paper-agg-db
-          property: connectionString
+        sync: false  # Set in Render dashboard → Environment → Add Secret
     healthCheckPath: /
     autoDeploy: true
 
-databases:
-  # PostgreSQL Database (Free tier: 90 days, then expires but can be recreated)
-  - name: paper-agg-db
+  # Cron Job - Weekly paper scraping (Sundays at 3 AM UTC)
+  - type: cron
+    name: paper-scraper-weekly
+    runtime: python
     plan: free
-    databaseName: paper_agg
-    user: paper_agg_user
+    schedule: "0 3 * * 0"  # Every Sunday at 3:00 AM UTC
+    buildCommand: pip install -r requirements.txt
+    startCommand: python scanner.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.9.0
+      - key: DATABASE_URL
+        sync: false  # Set in Render dashboard → Environment → Add Secret

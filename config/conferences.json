@@ -84,5 +84,13 @@
             "2024": "https://dblp.org/db/conf/ccs/ccs2024.html",
             "2025": "https://dblp.org/db/conf/ccs/ccs2025.html"
         }
+    },
+    "IEEE VIS": {
+        "scraper": "IEEEVIS",
+        "years": {
+            "2022": "https://ieeevis.org/year/2022/program/event_v-full.html",
+            "2023": "https://ieeevis.org/year/2023/program/event_v-full.html",
+            "2024": "https://ieeevis.org/year/2024/program/event_v-full.html"
+        }
     }
 }

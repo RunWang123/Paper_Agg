@@ -6,3 +6,6 @@ jinja2
 sqlalchemy
 aiohttp
 psycopg2-binary
+python-dotenv
+sentence-transformers
+pgvector

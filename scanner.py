@@ -2,7 +2,8 @@ import json
 import logging
 import os
 from sqlalchemy.orm import Session
-from database import SessionLocal, Paper, init_db
+from sqlalchemy import text
+from database import SessionLocal, Paper, init_db, IS_POSTGRES
 from scrapers.base import EventScraper, PaperData
 from scrapers.cvpr import CVPRScraper
 from scrapers.iccv import ICCVScraper
@@ -14,7 +15,12 @@ from scrapers.iclr import ICLRScraper
 from scrapers.usenix_security import USENIXScraper
 from scrapers.ieee_sp import IEEESPScraper
 from scrapers.acm_ccs import ACMCCSScraper
+from scrapers.ieee_vis import IEEEVISScraper
 from sqlalchemy import exists
+
+# Import embedding functions only if PostgreSQL is available
+if IS_POSTGRES:
+    from embeddings import generate_embedding, create_paper_embedding_text
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -56,14 +62,18 @@ class Scanner:
             return IEEESPScraper(conf_name, year)
         elif scraper_type == "ACMCCS":
             return ACMCCSScraper(conf_name, year)
+        elif scraper_type == "IEEEVIS":
+            return IEEEVISScraper(conf_name, year)
         else:
             return None
 
-    def run(self, target_confs=None):
+    def run(self, target_confs=None, fetch_abstracts=True):
         """
         Run configured scrapers and update DB.
         target_confs: Optional list of conference names to scrape (e.g. ['CVPR', 'ICCV']).
                       If None, scrapes all.
+        fetch_abstracts: If True (default), fetch abstracts from individual paper pages for semantic search.
+                         Set to False for faster scraping without abstracts.
         """
         init_db()
         session = SessionLocal()
@@ -74,6 +84,8 @@ class Scanner:
         logger.info(f"Conferences to process: {list(self.config.keys())}")
         if target_confs:
             logger.info(f"Filtering to only: {target_confs}")
+        if fetch_abstracts:
+            logger.info("Abstract fetching ENABLED - this will be slower")
         
         for conf_name, conf_data in self.config.items():
             # Filter if target_confs is specified
@@ -97,7 +109,11 @@ class Scanner:
                     continue
                 
                 try:
-                    found_papers = scraper.scrape(url)
+                    # Use scrape_with_abstracts if requested
+                    if fetch_abstracts:
+                        found_papers = scraper.scrape_with_abstracts(url)
+                    else:
+                        found_papers = scraper.scrape(url)
                     logger.info(f"Found {len(found_papers)} papers for {conf_id}")
                     
                     new_count = 0
@@ -121,6 +137,7 @@ class Scanner:
     def _save_paper(self, session: Session, p_data: PaperData, conf_name: str, year: int, source_url: str) -> bool:
         """
         Save paper to DB if not exists. Returns True if new.
+        Auto-generates embedding if PostgreSQL with pgvector is available.
         """
         # Check duplicates based on Title + Conference Name + Year
         exists = session.query(Paper).filter(
@@ -140,9 +157,28 @@ class Scanner:
             url=p_data.url,
             pdf_url=p_data.pdf_url,
             source_url=source_url,
-            tags=p_data.tags
+            tags=p_data.tags,
+            abstract=p_data.abstract  # Store abstract for semantic search
         )
         session.add(new_paper)
+        session.flush()  # Get the paper ID
+        
+        # Generate and store embedding if PostgreSQL is available
+        if IS_POSTGRES:
+            try:
+                text_for_embedding = create_paper_embedding_text(
+                    title=p_data.title,
+                    authors=p_data.authors or "",
+                    abstract=p_data.abstract or ""
+                )
+                embedding = generate_embedding(text_for_embedding)
+                update_sql = text(
+                    "UPDATE papers SET embedding = :embedding WHERE id = :id"
+                )
+                session.execute(update_sql, {"embedding": str(embedding), "id": new_paper.id})
+            except Exception as e:
+                logger.warning(f"Failed to generate embedding for paper {new_paper.id}: {e}")
+        
         return True
 
 if __name__ == "__main__":

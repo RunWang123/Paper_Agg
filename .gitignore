@@ -38,3 +38,10 @@ analyze_ccs.py
 verify_iccv_2025.py
 test_selective.py
 verify_scrapers.py
+
+# Environment variables (NEVER commit!)
+.env
+
+# SSH Keys (NEVER commit!)
+*.pem
+*.key

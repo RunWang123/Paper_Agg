@@ -3,12 +3,18 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
-from database import SessionLocal, Paper, init_db
+from sqlalchemy import text
+from database import SessionLocal, Paper, init_db, IS_POSTGRES
 from scanner import Scanner
 from starlette.requests import Request
 from typing import Optional, List
 from fastapi import Query
 import json
+
+# Import embedding functions only if PostgreSQL is available
+if IS_POSTGRES:
+    from embeddings import generate_embedding, create_paper_embedding_text
+
 
 app = FastAPI(title="Paper Aggregator")
 
@@ -134,21 +140,128 @@ async def read_root(
     })
 
 @app.post("/api/refresh")
-async def refresh_data(background_tasks: BackgroundTasks, conf: Optional[str] = Query(None)):
+async def refresh_data(
+    background_tasks: BackgroundTasks, 
+    conf: Optional[str] = Query(None),
+    fetch_abstracts: bool = Query(True, description="Fetch abstracts from paper detail pages (default: True for semantic search)")
+):
     """
     Trigger a scraper update.
     conf: Optional comma-separated list of conferences to update (e.g. "CVPR,ICCV").
           If None, updates all.
+    fetch_abstracts: Fetches abstracts for semantic search (default True). Set to False for faster title-only scraping.
     """
     scanner = Scanner()
     target_confs = None
     if conf:
         target_confs = [c.strip() for c in conf.split(",") if c.strip()]
         
-    background_tasks.add_task(scanner.run, target_confs=target_confs)
-    msg = f"Update started for {target_confs}" if target_confs else "Update started for all conferences"
+    background_tasks.add_task(scanner.run, target_confs=target_confs, fetch_abstracts=fetch_abstracts)
+    msg = f"Update started for {target_confs or 'all conferences'}"
+    if not fetch_abstracts:
+        msg += " (fast mode - no abstracts)"
+    else:
+        msg += " (with abstracts for semantic search)"
     return {"message": msg}
 
 @app.get("/api/papers")
 def get_papers_api(db: Session = Depends(get_db)):
     return db.query(Paper).limit(500).all()
+
+
+@app.get("/api/semantic-search")
+async def semantic_search(
+    q: str = Query(..., description="Search query"),
+    limit: int = Query(20, ge=1, le=100),
+    min_year: Optional[int] = None,
+    max_year: Optional[int] = None,
+    conferences: Optional[List[str]] = Query(None),
+    db: Session = Depends(get_db)
+):
+    """
+    Semantic search for papers using vector similarity.
+    Returns papers ranked by semantic similarity to the query.
+    """
+    if not IS_POSTGRES:
+        raise HTTPException(
+            status_code=501,
+            detail="Semantic search requires PostgreSQL with pgvector"
+        )
+    
+    # Generate embedding for the query
+    query_embedding = generate_embedding(q)
+    
+    # Build the SQL query with filters
+    filters = []
+    params = {"query_embedding": str(query_embedding), "limit": limit}
+    
+    if min_year:
+        filters.append("year >= :min_year")
+        params["min_year"] = min_year
+    
+    if max_year:
+        filters.append("year <= :max_year")
+        params["max_year"] = max_year
+    
+    if conferences:
+        filters.append("conference = ANY(:conferences)")
+        params["conferences"] = conferences
+    
+    where_clause = ""
+    if filters:
+        where_clause = "WHERE embedding IS NOT NULL AND " + " AND ".join(filters)
+    else:
+        where_clause = "WHERE embedding IS NOT NULL"
+    
+    # Use pgvector's <=> operator for cosine distance
+    sql = text(f"""
+        SELECT 
+            id, title, authors, conference, year, url, pdf_url, tags,
+            1 - (embedding <=> :query_embedding::vector) as similarity
+        FROM papers
+        {where_clause}
+        ORDER BY embedding <=> :query_embedding::vector
+        LIMIT :limit
+    """)
+    
+    result = db.execute(sql, params)
+    papers = []
+    for row in result:
+        papers.append({
+            "id": row.id,
+            "title": row.title,
+            "authors": row.authors,
+            "conference": row.conference,
+            "year": row.year,
+            "url": row.url,
+            "pdf_url": row.pdf_url,
+            "tags": row.tags,
+            "similarity": round(row.similarity * 100, 1)  # Convert to percentage
+        })
+    
+    return {
+        "query": q,
+        "count": len(papers),
+        "papers": papers
+    }
+
+
+@app.get("/api/stats")
+def get_stats(db: Session = Depends(get_db)):
+    """Get database statistics including embedding coverage."""
+    total_papers = db.query(Paper).count()
+    
+    stats = {
+        "total_papers": total_papers,
+        "is_postgres": IS_POSTGRES,
+    }
+    
+    if IS_POSTGRES:
+        # Count papers with embeddings
+        embedded_count = db.execute(
+            text("SELECT COUNT(*) FROM papers WHERE embedding IS NOT NULL")
+        ).scalar()
+        stats["papers_with_embeddings"] = embedded_count
+        stats["embedding_coverage"] = round(embedded_count / total_papers * 100, 1) if total_papers > 0 else 0
+    
+    return stats
