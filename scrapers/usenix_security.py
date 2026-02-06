@@ -60,3 +60,31 @@ class USENIXScraper(EventScraper):
             ))
             
         return papers
+
+    def scrape_abstract(self, paper_url: str) -> str:
+        """
+        Scrape abstract from USENIX paper page.
+        USENIX paper pages have the abstract in div.field-name-field-paper-description
+        """
+        if not paper_url or 'usenix.org' not in paper_url:
+            return ""
+        
+        soup = self.get_soup(paper_url)
+        if not soup:
+            return ""
+        
+        # USENIX uses this specific class for paper description/abstract
+        abstract_div = soup.find('div', class_='field-name-field-paper-description')
+        if abstract_div:
+            text = abstract_div.get_text(strip=True)
+            if len(text) > 50:
+                return text
+        
+        # Fallback: try meta description
+        meta = soup.find('meta', {'name': 'description'})
+        if meta:
+            content = meta.get('content', '')
+            if len(content) > 100:
+                return content
+        
+        return ""

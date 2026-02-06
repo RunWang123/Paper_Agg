@@ -60,3 +60,35 @@ class NDSSScraper(EventScraper):
             ))
             
         return papers
+
+    def scrape_abstract(self, paper_url: str) -> str:
+        """
+        Scrape abstract from NDSS paper page.
+        NDSS paper pages at ndss-symposium.org have the abstract in the article body.
+        """
+        if not paper_url or 'ndss-symposium.org' not in paper_url:
+            return ""
+        
+        soup = self.get_soup(paper_url)
+        if not soup:
+            return ""
+        
+        # Find the article or main content div
+        article = soup.find('article') or soup.find('div', class_='paper-data')
+        if article:
+            paragraphs = article.find_all('p')
+            # Usually the abstract is the third paragraph (after author info)
+            for p in paragraphs:
+                text = p.get_text(strip=True)
+                # Skip short paragraphs or author info
+                if len(text) > 200 and 'university' not in text.lower()[:100]:
+                    return text
+        
+        # Fallback: try meta description
+        meta = soup.find('meta', {'name': 'description'})
+        if meta:
+            content = meta.get('content', '')
+            if len(content) > 100:
+                return content
+        
+        return ""

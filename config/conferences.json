@@ -9,9 +9,9 @@
         }
     },
     "ICCV": {
-        "scraper": "ICCV",
+        "scraper": "CVPR",
         "years": {
-            "2023": "https://dblp.org/db/conf/iccv/iccv2023.html",
+            "2023": "https://openaccess.thecvf.com/ICCV2023?day=all",
             "2025": "https://iccv.thecvf.com/Conferences/2025/AcceptedPapers"
         }
     },
