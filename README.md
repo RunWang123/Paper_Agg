@@ -3,7 +3,9 @@
 🌐 **[Live Demo](https://paper-aggregator.onrender.com/)**
 
 A modern, web-based tool for aggregating and tracking accepted papers from major AI, Machine Learning, and Computer Security conferences (CVPR, NeurIPS, ICLR, ICML, ICCV, ECCV, USENIX Security, IEEE S&P, ACM CCS, NDSS).
-
+## Next Step
+- **Vectorized Database**: We plan to scrape the abstracts of papers and vectorize them. So you can do vectorized matching, not just a simple keyword search.
+- **More Conferences**: We plan to include more conferences: the next step is to include top system conferences, for example, MobiSys...
 ## Features
 
 - **Multi-Conference Support**: Scrapers for over 10 major conferences covering 2022-2026.
