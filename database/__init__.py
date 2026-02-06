@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, Integer, String, DateTime, UniqueConstraint, Text
+from sqlalchemy import create_engine, Column, Integer, String, DateTime, UniqueConstraint, Text, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from datetime import datetime
@@ -78,7 +78,7 @@ def init_db():
     if IS_POSTGRES:
         # Enable pgvector extension
         with engine.connect() as conn:
-            conn.execute("CREATE EXTENSION IF NOT EXISTS vector")
+            conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
             conn.commit()
     
     Base.metadata.create_all(bind=engine)
