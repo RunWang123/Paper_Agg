@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  # FastAPI Backend
+  backend:
+    build: .
+    container_name: paper_agg_backend
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://paper_user:paper_password@db:5432/paper_agg
+      - ALLOWED_ORIGINS=http://localhost:3000,http://YOUR_ORACLE_VM_IP:3000
+    depends_on:
+      - db
+    volumes:
+      - ./scraper.log:/app/scraper.log
+      - ./config:/app/config
+
+  # Next.js Frontend
+  frontend:
+    build: ./frontend
+    container_name: paper_agg_frontend
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://YOUR_ORACLE_VM_IP:8000
+    depends_on:
+      - backend
+
+  # PostgreSQL Database with pgvector
+  db:
+    image: ankane/pgvector:v0.4.1 # Image with pgvector pre-installed
+    container_name: paper_agg_db
+    restart: always
+    environment:
+      - POSTGRES_USER=paper_user
+      - POSTGRES_PASSWORD=paper_password
+      - POSTGRES_DB=paper_agg
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
