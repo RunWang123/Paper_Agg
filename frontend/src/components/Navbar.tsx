@@ -52,13 +52,13 @@ export function Navbar({ onRefresh }: NavbarProps) {
                                 lineHeight: 1.2,
                             }}
                         >
-                            Paper Aggregator
+                            CosmosPaper
                         </h1>
                         <p
                             className="text-text-muted"
                             style={{ fontSize: '11px', letterSpacing: '0.02em' }}
                         >
-                            Research paper discovery
+                            The Universe of Research
                         </p>
                     </div>
                 </div>

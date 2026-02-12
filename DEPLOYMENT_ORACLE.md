@@ -1,4 +1,4 @@
-# Deploying Paper Aggregator on Oracle Cloud (Docker)
+# Deploying CosmosPaper on Oracle Cloud (Docker)
 
 This guide walks you through deploying the Paper Aggregator (Next.js Frontend + FastAPI Backend + PostgreSQL) on an Oracle Cloud VM using Docker Compose.
 
@@ -121,3 +121,4 @@ For a cleaner URL (e.g., just the IP or a domain name) and HTTPS support, set up
 1.  Install Nginx: `sudo apt install nginx`
 2.  Configure `/etc/nginx/sites-available/default` to proxy port 80 to 3000 and `/api` to 8000.
 3.  Use Certbot for free SSL certificates.
+
