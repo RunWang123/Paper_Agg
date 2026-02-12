@@ -16,7 +16,18 @@ if IS_POSTGRES:
     from embeddings import generate_embedding, create_paper_embedding_text
 
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI(title="Paper Aggregator")
+
+# Configure CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],  # Next.js frontend
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Mount static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -60,6 +71,79 @@ async def get_logs():
     except FileNotFoundError:
         return {"logs": ["Log file not found."]}
 
+@app.get("/api/search")
+async def search_papers(
+    db: Session = Depends(get_db), 
+    q: Optional[str] = None,
+    min_year: Optional[str] = None,
+    max_year: Optional[str] = None,
+    conferences: Optional[List[str]] = Query(None),
+    page: int = Query(1, ge=1),
+    limit: int = Query(10, ge=1, le=100)
+):
+    """
+    Search papers with filters. Returns JSON for the Next.js frontend.
+    """
+    query = db.query(Paper).order_by(Paper.id.desc())
+    
+    # Text Search
+    if q:
+        search = f"%{q}%"
+        query = query.filter(
+            (Paper.title.ilike(search)) | 
+            (Paper.authors.ilike(search)) | 
+            (Paper.conference.ilike(search))
+        )
+    
+    # Year Filter
+    if min_year and min_year.strip():
+        try:
+            query = query.filter(Paper.year >= int(min_year))
+        except ValueError:
+            pass
+            
+    if max_year and max_year.strip():
+        try:
+            query = query.filter(Paper.year <= int(max_year))
+        except ValueError:
+            pass
+        
+    # Conference Filter
+    if conferences:
+        query = query.filter(Paper.conference.in_(conferences))
+    
+    # Get total count
+    total_count = query.count()
+    
+    # Pagination
+    total_pages = (total_count + limit - 1) // limit
+    offset = (page - 1) * limit
+    
+    # Fetch papers
+    papers = query.offset(offset).limit(limit).all()
+    
+    # Serialize papers to JSON-safe dicts (exclude embedding vector)
+    papers_json = []
+    for p in papers:
+        papers_json.append({
+            "id": p.id,
+            "title": p.title,
+            "authors": p.authors,
+            "conference": p.conference,
+            "year": p.year,
+            "url": p.url,
+            "pdf_url": p.pdf_url,
+            "tags": p.tags,
+        })
+    
+    return {
+        "papers": papers_json,
+        "total_count": total_count,
+        "page": page,
+        "limit": limit,
+        "total_pages": total_pages
+    }
+
 @app.get("/", response_class=HTMLResponse)
 async def read_root(
     request: Request, 
@@ -71,6 +155,7 @@ async def read_root(
     page: int = Query(1, ge=1),
     limit: int = Query(10, ge=1, le=500)
 ):
+    # Keep existing HTML endpoint for fallback/comparison
     query = db.query(Paper).order_by(Paper.id.desc())
     
     # Text Search
@@ -193,7 +278,7 @@ async def semantic_search(
     
     # Build the SQL query with filters
     filters = []
-    params = {"query_embedding": str(query_embedding), "limit": limit}
+    params = {"limit": limit}
     
     if min_year:
         filters.append("year >= :min_year")
@@ -213,14 +298,17 @@ async def semantic_search(
     else:
         where_clause = "WHERE embedding IS NOT NULL"
     
+    # Convert embedding to string for SQL injection (safe - generated internally, not user input)
+    embedding_str = str(query_embedding)
+    
     # Use pgvector's <=> operator for cosine distance
     sql = text(f"""
         SELECT 
             id, title, authors, conference, year, url, pdf_url, tags,
-            1 - (embedding <=> :query_embedding::vector) as similarity
+            1 - (embedding <=> '{embedding_str}'::vector) as similarity
         FROM papers
         {where_clause}
-        ORDER BY embedding <=> :query_embedding::vector
+        ORDER BY embedding <=> '{embedding_str}'::vector
         LIMIT :limit
     """)
     
