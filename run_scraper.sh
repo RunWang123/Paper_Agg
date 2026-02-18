@@ -12,7 +12,7 @@ source activate h100_env || conda activate h100_env
 
 # Set database URL
 # Set database URL (Oracle Cloud VM)
-export DATABASE_URL='postgresql://paper_user:SecurePass123@150.136.114.211:5432/paper_agg'
+export DATABASE_URL='postgresql://paper_user:paper_password@150.136.114.211:5432/paper_agg'
 
 # Go to repo directory
 cd ~/Paper_Agg
