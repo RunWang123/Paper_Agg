@@ -194,27 +194,53 @@ export default function Home() {
             />
 
             {/* Semantic Toggle */}
-            <button
+            {/* Semantic Toggle */}
+            <div
               onClick={() => setIsSmartSearch(!isSmartSearch)}
+              className="group"
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px',
-                padding: '10px',
-                borderRadius: '8px',
-                fontSize: '13px',
-                fontWeight: 500,
+                justifyContent: 'space-between',
+                padding: '12px 4px',
                 cursor: 'pointer',
-                width: '100%',
-                border: isSmartSearch ? '1px solid rgba(59, 130, 246, 0.5)' : '1px solid rgba(51, 65, 85, 0.5)',
-                background: isSmartSearch ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
-                color: isSmartSearch ? '#60a5fa' : '#94a3b8',
+                userSelect: 'none'
               }}
             >
-              <Sparkles style={{ width: '14px', height: '14px' }} />
-              {isSmartSearch ? 'Semantic ON' : 'Semantic'}
-            </button>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <span style={{
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  color: isSmartSearch ? '#e2e8f0' : '#94a3b8',
+                  transition: 'color 0.2s'
+                }}>
+                  Semantic Search
+                </span>
+              </div>
+
+              {/* Toggle Switch */}
+              <div style={{
+                position: 'relative',
+                width: '44px',
+                height: '24px',
+                borderRadius: '9999px',
+                background: isSmartSearch ? '#3b82f6' : '#334155',
+                transition: 'background-color 0.2s',
+              }}>
+                <div style={{
+                  position: 'absolute',
+                  top: '2px',
+                  left: '2px',
+                  width: '20px',
+                  height: '20px',
+                  borderRadius: '50%',
+                  background: 'white',
+                  transform: isSmartSearch ? 'translateX(20px)' : 'translateX(0)',
+                  transition: 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.2)'
+                }} />
+              </div>
+            </div>
 
             {/* Year Range */}
             <div>
@@ -286,27 +312,52 @@ export default function Home() {
 
             {/* Semantic Toggle */}
             <div>
-              <button
+              <div
                 onClick={() => setIsSmartSearch(!isSmartSearch)}
+                className="group"
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  padding: '10px',
-                  borderRadius: '8px',
-                  fontSize: '13px',
-                  fontWeight: 500,
+                  justifyContent: 'space-between',
+                  padding: '4px 0',
                   cursor: 'pointer',
-                  width: '100%',
-                  border: isSmartSearch ? '1px solid rgba(59, 130, 246, 0.5)' : '1px solid rgba(51, 65, 85, 0.5)',
-                  background: isSmartSearch ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
-                  color: isSmartSearch ? '#60a5fa' : '#94a3b8',
+                  userSelect: 'none'
                 }}
               >
-                <Sparkles style={{ width: '14px', height: '14px' }} />
-                {isSmartSearch ? 'Semantic ON' : 'Semantic'}
-              </button>
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <span style={{
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    color: isSmartSearch ? '#e2e8f0' : '#94a3b8',
+                    transition: 'color 0.2s'
+                  }}>
+                    Semantic Search
+                  </span>
+                </div>
+
+                {/* Toggle Switch */}
+                <div style={{
+                  position: 'relative',
+                  width: '44px',
+                  height: '24px',
+                  borderRadius: '9999px',
+                  background: isSmartSearch ? '#3b82f6' : '#334155',
+                  transition: 'background-color 0.2s',
+                }}>
+                  <div style={{
+                    position: 'absolute',
+                    top: '2px',
+                    left: '2px',
+                    width: '20px',
+                    height: '20px',
+                    borderRadius: '50%',
+                    background: 'white',
+                    transform: isSmartSearch ? 'translateX(20px)' : 'translateX(0)',
+                    transition: 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.2)'
+                  }} />
+                </div>
+              </div>
             </div>
 
             {/* Year Range */}

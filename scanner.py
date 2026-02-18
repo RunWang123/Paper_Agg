@@ -147,6 +147,36 @@ class Scanner:
         ).first()
         
         if exists:
+            # Check if we can improve the existing record
+            updated = False
+            if not exists.abstract and p_data.abstract:
+                exists.abstract = p_data.abstract
+                updated = True
+                logger.info(f"Updated abstract for existing paper: {p_data.title}")
+            
+            if not exists.url and p_data.url:
+                exists.url = p_data.url
+                updated = True
+            
+            if updated:
+                session.commit()
+                # Regenerate embedding for updated paper
+                if IS_POSTGRES and exists.abstract:
+                     try:
+                        text_for_embedding = create_paper_embedding_text(
+                            title=exists.title,
+                            authors=exists.authors or "",
+                            abstract=exists.abstract or ""
+                        )
+                        embedding = generate_embedding(text_for_embedding)
+                        update_sql = text(
+                            "UPDATE papers SET embedding = :embedding WHERE id = :id"
+                        )
+                        session.execute(update_sql, {"embedding": str(embedding), "id": exists.id})
+                     except Exception as e:
+                        logger.warning(f"Failed to update embedding: {e}")
+                return True # Treated as "processed/saved"
+            
             return False
         
         new_paper = Paper(

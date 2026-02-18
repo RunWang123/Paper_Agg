@@ -140,3 +140,65 @@ class EventScraper(ABC):
                 return None
         
         return None
+
+class PlaywrightScraper(EventScraper):
+    """
+    Scraper that uses Playwright for dynamic content.
+    Automatically handles browser lifecycle and content fetching.
+    """
+    def get_soup(self, url: str):
+        """Default get_soup using Playwright without scrolling"""
+        return self.get_dynamic_soup(url, scroll=False)
+
+    def get_dynamic_soup(self, url: str, scroll: bool = False, wait_selector: str = None):
+        from playwright.sync_api import sync_playwright
+        
+        try:
+            with sync_playwright() as p:
+                browser = p.chromium.launch(headless=True)
+                page = browser.new_page()
+                page.goto(url, timeout=60000)
+                
+                # Basic wait for content
+                try:
+                    if wait_selector:
+                        page.wait_for_selector(wait_selector, timeout=10000)
+                    else:
+                        page.wait_for_load_state("networkidle", timeout=10000)
+                except:
+                    pass
+
+                if scroll:
+                    self._scroll_to_bottom(page)
+                    
+                content = page.content()
+                browser.close()
+                return BeautifulSoup(content, 'html.parser')
+        except ImportError:
+            print("Playwright not installed. Please run: pip install playwright && playwright install chromium")
+            return super().get_soup(url)
+        except Exception as e:
+            print(f"Playwright error for {url}: {e}")
+            return None
+
+    def _scroll_to_bottom(self, page, max_retries=10):
+        """Helper to scroll infinite loading pages with better waiting"""
+        print("    Scrolling to bottom...")
+        last_height = page.evaluate("document.body.scrollHeight")
+        retries = 0
+        
+        while retries < max_retries:
+            page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+            time.sleep(2) # Wait for content to load
+            new_height = page.evaluate("document.body.scrollHeight")
+            
+            if new_height > last_height:
+                print(f"    Page grew: {last_height} -> {new_height}")
+                retries = 0
+                last_height = new_height
+            else:
+                retries += 1
+                if retries % 2 == 0:
+                     print(f"    No new content... retry {retries}/{max_retries}")
+        
+        print("    Finished scrolling.")

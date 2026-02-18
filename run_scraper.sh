@@ -11,15 +11,16 @@ module load anaconda3/2023.09 || true
 source activate h100_env || conda activate h100_env
 
 # Set database URL
-export DATABASE_URL='postgresql://paper_user:SecurePass123@3.80.49.152:5432/paper_agg'
+# Set database URL (Oracle Cloud VM)
+export DATABASE_URL='postgresql://paper_user:SecurePass123@150.136.114.211:5432/paper_agg'
 
 # Go to repo directory
 cd ~/Paper_Agg
 
-# Install dependencies
+# Install dependencies (ensure we have latest)
 pip install -r requirements.txt
 
-# Run the scraper with abstracts + embeddings
-echo "Starting scraper at $(date)"
-srun python -c "from scanner import Scanner; Scanner().run()"
+# Run the scraper for CVPR only (Abstracts enabled by default)
+echo "Starting CVPR scraper at $(date)"
+srun python -c "from scanner import Scanner; Scanner().run(target_confs=['CVPR'])"
 echo "Finished at $(date)"

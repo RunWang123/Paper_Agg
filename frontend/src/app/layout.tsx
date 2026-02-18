@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CosmosPaper | AI Research Platform",
+  title: "CosmosPaper",
   description: "Search and explore academic papers across top conferences",
 };
 
