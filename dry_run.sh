@@ -17,6 +17,7 @@ export DATABASE_URL='postgresql://paper_user:paper_password@150.136.114.211:5432
 cd ~/Paper_Agg
 
 # Run the dry run script
+playwright install chromium
 echo "Starting Dry Run at $(date)"
 python scripts/dry_run.py
 echo "Finished at $(date)"
