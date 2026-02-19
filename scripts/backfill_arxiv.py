@@ -12,7 +12,9 @@ import re
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from database import SessionLocal, Paper, init_db
-from scanner import Scanner # For _save_paper logic re-use if needed, though we will just update
+from scanner import Scanner
+# Import embedding functions
+from embeddings import create_paper_embedding_text, generate_embedding
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -23,7 +25,6 @@ RATE_LIMIT_DELAY = 3.0  # Seconds between requests
 
 def clean_title_for_search(title):
     # Remove special characters for search query
-    # ArXiv search is sensitive. Replace non-alphanumeric with space.
     cleaned = re.sub(r'[^a-zA-Z0-9]', ' ', title)
     return re.sub(r'\s+', ' ', cleaned).strip()
 
@@ -32,7 +33,6 @@ def normalize_title(title):
 
 def search_arxiv(title):
     cleaned_query = clean_title_for_search(title)
-    # Search by title (ti:)
     query_param = f'ti:"{cleaned_query}"'
     encoded_query = urllib.parse.quote(query_param)
     
@@ -43,7 +43,6 @@ def search_arxiv(title):
             xml_data = response.read()
             
         root = ET.fromstring(xml_data)
-        # Namespace map
         ns = {'atom': 'http://www.w3.org/2005/Atom', 'arxiv': 'http://arxiv.org/schemas/atom'}
         
         entry = root.find('atom:entry', ns)
@@ -52,16 +51,23 @@ def search_arxiv(title):
             summary = entry.find('atom:summary', ns).text.strip()
             link = entry.find('atom:id', ns).text.strip()
             
-            # Verify match (ArXiv search is fuzzy, we need to be sure)
+            # Extract authors
+            authors = []
+            for author in entry.findall('atom:author', ns):
+                name = author.find('atom:name', ns).text.strip()
+                authors.append(name)
+            authors_str = ", ".join(authors)
+            
+            # Verify match
             norm_db_title = normalize_title(title)
             norm_arxiv_title = normalize_title(arxiv_title)
             
-            # Check for high similarity (exact match of alphanumeric chars)
             if norm_db_title == norm_arxiv_title:
                 return {
                     "abstract": summary,
                     "arxiv_url": link,
-                    "title": arxiv_title
+                    "title": arxiv_title,
+                    "authors": authors_str
                 }
             else:
                 logger.info(f"Mismatch: DB='{title}' vs ArXiv='{arxiv_title}'")
@@ -73,12 +79,15 @@ def search_arxiv(title):
     
     return None
 
-def run_backfill():
+def run_backfill(limit=0, dry_run=False):
     init_db()
     session = SessionLocal()
     
-    # Find papers with NO abstract
-    # Limit to CVPR 2025 for now (focus area)
+    # metrics
+    count_updated = 0
+    count_embeddings = 0
+    
+    # 1. Backfill Abstracts & Authors
     papers = session.query(Paper).filter(
         Paper.conference == "CVPR", 
         Paper.year == 2025,
@@ -87,7 +96,9 @@ def run_backfill():
     
     logger.info(f"Found {len(papers)} CVPR 2025 papers missing abstracts.")
     
-    count_updated = 0
+    if limit > 0:
+        logger.info(f"Limiting processing to first {limit} papers.")
+        papers = papers[:limit]
     
     for i, paper in enumerate(papers):
         logger.info(f"[{i+1}/{len(papers)}] Searching ArXiv for: {paper.title[:50]}...")
@@ -96,25 +107,63 @@ def run_backfill():
         
         if result:
             logger.info("  ✅ Found on ArXiv!")
-            paper.abstract = result['abstract']
-            # Optionally add arxiv link to tags or source_url if we want
-            # paper.pdf_url = result['arxiv_url'] # Be careful overwriting
+            logger.info(f"     Title: {result['title']}")
+            logger.info(f"     Authors: {result['authors']}")
+            logger.info(f"     Abstract Length: {len(result['abstract'])}")
             
-            if not paper.tags:
-                paper.tags = []
-            if "arxiv" not in paper.tags:
-                paper.tags.append("arxiv")
+            if dry_run:
+                logger.info("     [DRY RUN] Would update DB and regenerate embedding.")
+                time.sleep(1) # simulate
+                continue
+
+            paper.abstract = result['abstract']
+            
+            # Update authors if new list is longer/better (heuristic)
+            if result['authors'] and len(result['authors']) > len(paper.authors or ""):
+                 paper.authors = result['authors']
+            
+            if not paper.tags: paper.tags = []
+            if "arxiv" not in paper.tags: paper.tags.append("arxiv")
+            
+            # Regenerate embedding immediately with new data
+            try:
+                text_for_embedding = create_paper_embedding_text(
+                    title=paper.title,
+                    authors=paper.authors or "",
+                    abstract=paper.abstract or ""
+                )
+                embedding = generate_embedding(text_for_embedding)
                 
-            session.commit()
+                # We need to execute raw SQL for pgvector update usually, 
+                # but let's try assuming the ORM might handle it if mapped, 
+                # otherwise use raw SQL like scanner.py
+                update_sql = text("UPDATE papers SET embedding = :embedding WHERE id = :id")
+                session.execute(update_sql, {"embedding": str(embedding), "id": paper.id})
+                count_embeddings += 1
+            except Exception as e:
+                 logger.error(f"  ❌ Embedding failed: {e}")
+
+            session.commit() # Commit this paper's updates
             count_updated += 1
         else:
-            logger.info("  ❌ Not found or mismatch.")
+            logger.info("  ❌ Not found.")
             
-        # Respect Rate Limit
         time.sleep(RATE_LIMIT_DELAY)
-        
-    logger.info(f"Backfill complete. Updated {count_updated} papers.")
+
+    logger.info(f"Backfill complete.")
+    if dry_run:
+        logger.info("  [DRY RUN] No changes were made to the database.")
+    else:
+        logger.info(f"  - Abstracts updated: {count_updated}")
+        logger.info(f"  - Embeddings regenerated: {count_embeddings}")
     session.close()
 
 if __name__ == "__main__":
-    run_backfill()
+    import argparse
+    
+    parser = argparse.ArgumentParser(description="Backfill missing abstracts from ArXiv")
+    parser.add_argument("--limit", type=int, default=0, help="Limit number of papers to process (0 for all)")
+    parser.add_argument("--dry-run", action="store_true", help="Print actions without saving to DB")
+    args = parser.parse_args()
+    
+    run_backfill(limit=args.limit, dry_run=args.dry_run)
