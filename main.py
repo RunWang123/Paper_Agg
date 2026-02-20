@@ -354,3 +354,75 @@ def get_stats(db: Session = Depends(get_db)):
         stats["embedding_coverage"] = round(embedded_count / total_papers * 100, 1) if total_papers > 0 else 0
     
     return stats
+
+if __name__ == "__main__":
+    import argparse
+    import uvicorn
+    import sys
+
+    parser = argparse.ArgumentParser(description="Paper Aggregator & Scraper")
+    parser.add_argument("--conference", type=str, help="Run scraper for specific conference (e.g. CVPR)")
+    parser.add_argument("--year", type=int, help="Run scraper for specific year (e.g. 2024)")
+    parser.add_argument("--serve", action="store_true", help="Run the web server")
+    parser.add_argument("--host", type=str, default="0.0.0.0", help="Host for web server")
+    parser.add_argument("--port", type=int, default=8000, help="Port for web server")
+    
+    args = parser.parse_args()
+    
+    # If no arguments provided, check if we want to default to something
+    if len(sys.argv) == 1:
+        print("No arguments provided. Running web server...")
+        uvicorn.run("main:app", host=args.host, port=args.port, reload=True)
+        
+    elif args.conference:
+        # Run scraper mode
+        print(f"Starting Scraper for {args.conference} {args.year or ''}...")
+        
+        # Initialize DB
+        try:
+            init_db()
+        except Exception as e:
+            print(f"DB Init Warning: {e}")
+            
+        scanner = Scanner()
+        
+        target_conf = args.conference
+        if target_conf not in scanner.config:
+            print(f"Error: Conference '{target_conf}' not found in configuration.")
+            sys.exit(1)
+            
+        if args.year:
+            year_str = str(args.year)
+            # Patch config for specific year target
+            # Use existing URL from config if available, else standard fallback
+            
+            # Since ICLR scraper handles year internally, we just need to ensure 
+            # scanner iterates safely.
+            
+            # Simple approach: Create a temporary single-entry config
+            # scanner.config is {Conf: {scraper:..., years:{...}}}
+            
+            existing_years = scanner.config[target_conf].get("years", {})
+            
+            # If the year is not in config, we can add it (needed for ICLR 2024 JSON call maybe?)
+            # ICLR scraper calls self.scrape_from_json(self.year) independent of URL
+            # but base scraper needs a URL to pass to scrape()
+            
+            url = existing_years.get(year_str, f"https://override-for-{year_str}")
+            
+            # Override config to just this one entry
+            scanner.config = {
+                target_conf: {
+                    "scraper": scanner.config[target_conf]["scraper"],
+                    "years": {year_str: url}
+                }
+            }
+        else:
+            # Run all configured years for this conference
+            scanner.config = {target_conf: scanner.config[target_conf]}
+            
+        scanner.run(target_confs=[target_conf])
+        print("Scrape run complete.")
+        
+    elif args.serve:
+        uvicorn.run("main:app", host=args.host, port=args.port, reload=True)
